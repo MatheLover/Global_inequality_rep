@@ -1,7 +1,54 @@
+# install.packages("lmerTest")
+# install.packages("sp")
+# install.packages('MuMIn')
+# install.packages("raster")
+# install.packages("rasterVis")
+# install.packages("rgdal")
+# install.packages("mixtools")
+# install.packages("RColorBrewer")
+# install.packages("visreg")
 
-load('pnas_light_ineq.RData')
+# load data 
+test <- load('pnas_light_ineq.RData')
+library(MuMIn)
+library(sp)
+library(lmerTest)
+library(visreg)
+library(tidyverse)
+library(raster)
+library(rasterVis)
+library(rgdal)
+library(mixtools)
+library(RColorBrewer)
 
-#Table 1
+# check NA
+all(is.na(df_nat))
+all(is.na(df_US_states))
+
+# check global dataset 
+summary(unique(df_nat$ISO3)) # 57 countries but we have 195 countries in the world  
+(unique(df_nat$Year)) # 1995 2000 2005 2010 1990
+summary(df_nat$Gini) # min 20; mean 34.2; max 58.3 -- * 100 ? 
+plot(density(df_nat$Gini))
+summary(df_nat$Gini_SE) # min 0.2 mean 0.75 max 1
+summary(df_nat$Light_Gini) # min 24; mean 53.91; max 88
+summary(df_nat$GDP)
+sorted <- df_nat[order(-df_nat$GDP,-df_nat$Year),] # order is correct; yet some countries only have two-year data 
+summary(df_nat$POP)
+sorted_pop <- df_nat[order(-df_nat$POP,-df_nat$Year),] 
+
+# read ctry code 
+code <- readxl::read_excel("/Users/benchiang/Documents/R_Project/PNAS_light_inequality/historical-classification-of-developed-and-developing-regions.xlsx",sheet=2)
+code <- code[code$`Developed / Developing regions` == "Developing",]
+df_deving <- df_nat[(df_nat$ISO3 %in% code$`ISO-alpha3 Code`),]  
+unique(df_deving$ISO3) # 24 developing countries  / 183 overall 
+
+mod_1 <- lmer(Gini ~ Light_Gini + 
+                (1 | Year), 
+              data = df_deving)
+summary(mod_1)
+r.squaredGLMM(mod_1)[2]
+
 
 mod_1 <- lmer(Gini ~ Light_Gini + 
                 (1 | Year), 
@@ -35,6 +82,13 @@ mod_4 <- lm(Gini ~ Light_Gini +
                 log(POP) +
                 log(GDP), 
               data = df_nat)
+summary(mod_4)
+
+
+mod_4 <- lm(Gini ~ Light_Gini +  
+              log(POP) +
+              log(GDP), 
+            data = df_deving)
 summary(mod_4)
 
 
@@ -92,5 +146,7 @@ ggplot(df_US_states[year != 2005], aes(light_gini, Gini)) + geom_point() +
 # Use data https://zenodo.org/record/4635734/files/gini_2010.tif?download=1 to plot the smoothed version for 2010. 
 
 
-
+name <- "agg_gini_2010.tif"
+imported_raster <- raster(name)
+spplot(imported_raster)
 
